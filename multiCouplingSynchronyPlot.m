@@ -69,6 +69,7 @@ function [H] = multiCouplingSynchronyPlot(R,popts)
 % barMax = the handle(s) of the plotted maximum statistic bars
 % sigThresh = the handle(s) of the plotted statistical significance lines
 % leg = the handle of the legend
+% cb = the handle of the colorbar
 %
 % --------------------
 % Copyright Cove Sturtevant, 2015. 
@@ -90,8 +91,15 @@ elseif ~isfield(R,popts.testStatistic)
     return
 end
 
+if ~isfield(popts,'offset')
+    popts.offset = 0;
+elseif numel(popts.offset) ~= 1 && (size(popts.offset,1) ~= size(X,1) || size(popts.offset,2) ~= size(popts.offset,2))
+    disp('Invalid offset. Check popts.offset')
+    return
+end
+
 % Pull the test statistic
-X = eval(['R.' popts.testStatistic]);
+X = eval(['R.' popts.testStatistic])+popts.offset;
 [nVars,~,nLags,nFiles] = size(X);
 
 if ~isfield(popts,'SigThresh')
@@ -99,7 +107,7 @@ if ~isfield(popts,'SigThresh')
 elseif ~isfield(R,popts.SigThresh)
     XSigThresh = [];
 else
-    XSigThresh = eval(['R.' popts.SigThresh]);    
+    XSigThresh = eval(['R.' popts.SigThresh])+popts.offset;    
 end
 
 if ~isfield(popts,'ToVar')
@@ -253,14 +261,16 @@ if ~isempty(XSigThresh)
     if size(XSigThresh,3) ~= nLags
         XsT = flipud(XSigThresh(ri,ci,1,popts.fi(1)));
     else
-        XsT = flipud(XSigThresh(ri,ci,maxi,popts.fi(1)));
+        XsT = flipud(XSigThresh(ri,ci,maxi,popts.fi(1))); % sig thresh at lag of max statistic
+        %XsT = flipud(mean(XSigThresh(ri,ci,:,popts.fi(1)),3));% mean of sig threshes at any lag
+
     end
 else
     XsT = NaN(size(X0));
 end
 
 % Assign colors to the Max Statistic according to the lag
-cmap = colormap(jet(100));
+cmap = colormap(redblue(100));
 if ~isempty(popts.claglim)
     cax = popts.claglim;
 elseif numel(lagMax) == 1
@@ -300,6 +310,7 @@ else
 end
 title([R.varSymbols{ci} ' (file ' num2str(popts.fi) ')'])
 set(gca,'box','on')
+H.cb = cbh;
 
 if popts.saveFig
     

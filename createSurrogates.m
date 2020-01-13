@@ -31,4 +31,13 @@ elseif opts.SurrogateMethod == 3
         % IAAFT surrogates requires gap-free data
         logwrite('Warning: Surrogates set to NaN. Use of IAAFT method requires gap-free data.',1);
     end
+elseif opts.SurrogateMethod == 4
+    
+    % Make random walks (using normally distributed random numbers)
+    Surrogates = randn(size(Data,1),size(Data,2),nsur);
+    Surrogates = cumsum(Surrogates,1);
+    
+    % Replace original gaps
+    Surrogates(repmat(isnan(Data),1,1,nsur))=NaN;
+    
 end

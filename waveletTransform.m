@@ -29,7 +29,7 @@ function [waveData] = waveletTransform(rawData,N,wavename,DorS,parallelWorkers)
 % -------------------------------
 % Cove Sturtevant, 2015.
 
-plotfigs = 1; % plot figures while processing?
+plotfigs = 0; % plot figures while processing?
 
 % Collect stats on data
 sz = size(rawData);

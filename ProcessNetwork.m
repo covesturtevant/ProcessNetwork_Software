@@ -1,6 +1,6 @@
 function [R,opts] = ProcessNetwork(opts)
 % 
-% This code contains Version 1.5 of the main ProcessNetwork software, 
+% This code contains Version 1.5a of the main ProcessNetwork software, 
 % coordinating all processing steps.
 % 
 % ------- Inputs -------
@@ -26,7 +26,21 @@ function [R,opts] = ProcessNetwork(opts)
 % reduce computation time, add a wavelet tranformation module and IAAFT 
 % surrogate data genereation, and repeat all processing steps similarly on
 % the surrogate data.
-
+% Version 1.5a adds a couple options and does further optimizing of the
+% code for computation time
+% - Added output for Linear Redundancy (Palus 2008) - See Sturtevant et al.
+% 2016 for rationale
+% - Added option to choose 'target' variables (akin to y variable in an x-y
+% correlation). This is an option purely to reduce processing time by 
+% not evaluating relationships for explanatory variables.
+% - Added option to surrogate test each lag. This is important when there
+% are gaps in the data.
+% - Added output of relative mutual information normalized by (divided by) 
+% the mean relative mutual information of the shuffled surrogates, and 
+% associated statistical significance. New outputs are
+% R.IRnormbyShuff
+% R.SigThreshIRnormbyShuff
+% R.sigmaShuffIRnormByShuff
 
 %% Check parameters and settings
 global processLog
@@ -148,7 +162,8 @@ for fi = 1:nDataFiles
                 logwrite('ERROR: Some or all input data are not classified. Check options and/or data. Skipping file...',1);
                 continue
             end
-            [E] = entropyFunction(Data,R.lagVect,R.nBinVect,NaN,opts.parallelWorkers);
+            
+            [E] = entropyFunction(Data,opts.targetVars,R.lagVect,R.nBinVect,NaN,opts.parallelWorkers);
 
             % Assign outputs
             R.HXt(:,:,:,fi)=E.HXt;
@@ -161,6 +176,7 @@ for fi = 1:nDataFiles
             R.nCounts(:,:,:,fi)=E.nCounts;
             R.I(:,:,:,fi)=E.I;
             R.T(:,:,:,fi)=E.T;
+            R.L(:,:,:,fi)=E.L;
         end
     end
     
@@ -189,6 +205,8 @@ for fi = 1:nDataFiles
             logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random shuffle method.'],1);
         elseif opts.SurrogateMethod == 3
             logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using IAAFT method (this may take a while).'],1);
+        elseif opts.SurrogateMethod == 4
+            logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method (this may take a while).'],1);
         end
         
         % Initalize surrogate matrix
@@ -211,12 +229,13 @@ for fi = 1:nDataFiles
         end
         shuffT = NaN([nVars nVars nSLags opts.nTests]);
         shuffI = NaN([nVars nVars nSLags opts.nTests]);
+        shuffL = NaN([nVars nVars nSLags opts.nTests]);
         shuffHYf = NaN([nVars nVars nSLags opts.nTests]);        
 
         for si = 1:opts.nTests
             if opts.SurrogateMethod == 1
                 Surrogates = SavedSurrogates(:,:,si);
-            elseif ~isempty(find([2 3] == opts.SurrogateMethod,1))
+            elseif ~isempty(find([2 3 4] == opts.SurrogateMethod,1))
                 % Create surrogates using method specified
                 Surrogates = createSurrogates(opts,rawData,1);
             end
@@ -251,19 +270,21 @@ for fi = 1:nDataFiles
                         logwrite('ERROR: Surrogate data are not classified. Check options and/or input data. Aborting surrogate testing...',1);
                         break
                     end
-                    [E] = entropyFunction(Surrogates,SlagVect,R.nBinVect,NaN,opts.parallelWorkers);
+                    [E] = entropyFunction(Surrogates,opts.targetVars,SlagVect,R.nBinVect,NaN,opts.parallelWorkers);
                     
                     % Assign outputs specific to surrogate data
                     if opts.SurrogateTestEachLag == 1
                         % All lags tested
                         shuffT(:,:,:,si) = E.T;
                         shuffI(:,:,:,si) = E.I;
+                        shuffL(:,:,:,si) = E.L;
                         shuffHYf(:,:,:,si) = E.HYf;
                         
                     else
                         % Just last lag
                         shuffT(:,:,1,si) = E.T(:,:,end);
                         shuffI(:,:,1,si) = E.I(:,:,end);
+                        shuffL(:,:,1,si) = E.L(:,:,end);
                         shuffHYf(:,:,1,si) = E.HYf(:,:,end);
                     end
                 end
@@ -275,6 +296,8 @@ for fi = 1:nDataFiles
         R.sigmaShuffT(:,:,:,fi)=std(shuffT,0,4);
         R.meanShuffI(:,:,:,fi)=mean(shuffI,4);
         R.sigmaShuffI(:,:,:,fi)=std(shuffI,0,4);
+        R.meanShuffL(:,:,:,fi)=mean(shuffL,4);
+        R.sigmaShuffL(:,:,:,fi)=std(shuffL,0,4);
         R.meanShuffTR(:,:,:,fi)=mean(shuffT./shuffHYf,4);
         R.sigmaShuffTR(:,:,:,fi)=std(shuffT./shuffHYf,0,4);
         R.meanShuffIR(:,:,:,fi)=mean(shuffI./shuffHYf,4);
@@ -372,7 +395,7 @@ if opts.binType == 2
         % Run entropy function
         if opts.doEntropy
             logwrite('Running entropy function.',1);
-            [E] = entropyFunction(Data,R.lagVect,R.nBinVect,NaN,opts.parallelWorkers);
+            [E] = entropyFunction(Data,opts.targetVars,R.lagVect,R.nBinVect,NaN,opts.parallelWorkers);
 
             % Assign outputs
             R.HXt(:,:,:,fi)=E.HXt;
@@ -385,6 +408,7 @@ if opts.binType == 2
             R.nCounts(:,:,:,fi)=E.nCounts;
             R.I(:,:,:,fi)=E.I;
             R.T(:,:,:,fi)=E.T;
+            R.L(:,:,:,fi)=E.L;
         end
 
         % Are we saving the Surrogates? If so, load or initialize matrix
@@ -404,6 +428,8 @@ if opts.binType == 2
                 logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random shuffle method (this may take a while)...'],1);
             elseif opts.SurrogateMethod == 3
                 logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using IAAFT method (this may take a while)...'],1);
+            elseif opts.SurrogateMethod == 4
+                logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method (this may take a while)...'],1);
             end
 
             % Initalize surrogate matrix
@@ -422,12 +448,13 @@ if opts.binType == 2
             end
             shuffT = NaN([nVars nVars nSLags opts.nTests]);
             shuffI = NaN([nVars nVars nSLags opts.nTests]);
+            shuffL = NaN([nVars nVars nSLags opts.nTests]);
             shuffHYf = NaN([nVars nVars nSLags opts.nTests]);        
         
             for si = 1:opts.nTests
                 if opts.SurrogateMethod == 1
                     Surrogates = SavedSurrogates(:,:,si);
-                elseif ~isempty(find([2 3] == opts.SurrogateMethod,1))
+                elseif ~isempty(find([2 3 4] == opts.SurrogateMethod,1))
                     % Create surrogates using method specified
                     [Surrogates] = createSurrogates(opts,rawData,1);
                 end
@@ -453,19 +480,21 @@ if opts.binType == 2
                 % Run entropy function
                 if opts.doEntropy
                     
-                    [E] = entropyFunction(Surrogates,SlagVect,R.nBinVect,NaN,opts.parallelWorkers);
+                    [E] = entropyFunction(Surrogates,opts.targetVars,SlagVect,R.nBinVect,NaN,opts.parallelWorkers);
                     
                     % Assign outputs specific to surrogate data
                     if opts.SurrogateTestEachLag == 1
                         % All lags tested
                         shuffT(:,:,:,si) = E.T;
                         shuffI(:,:,:,si) = E.I;
+                        shuffL(:,:,:,si) = E.L;
                         shuffHYf(:,:,:,si) = E.HYf;
                         
                     else
                         % Just last lag
                         shuffT(:,:,1,si) = E.T(:,:,end);
                         shuffI(:,:,1,si) = E.I(:,:,end);
+                        shuffL(:,:,1,si) = E.L(:,:,end);
                         shuffHYf(:,:,1,si) = E.HYf(:,:,end);
                     end
                 end              
@@ -476,6 +505,8 @@ if opts.binType == 2
             R.sigmaShuffT(:,:,:,fi)=std(shuffT,0,4);
             R.meanShuffI(:,:,:,fi)=mean(shuffI,4);
             R.sigmaShuffI(:,:,:,fi)=std(shuffI,0,4);
+            R.meanShuffL(:,:,:,fi)=mean(shuffL,4);
+            R.sigmaShuffL(:,:,:,fi)=std(shuffL,0,4);
             R.meanShuffTR(:,:,:,fi)=mean(shuffT./shuffHYf,4);
             R.sigmaShuffTR(:,:,:,fi)=std(shuffT./shuffHYf,0,4);
             R.meanShuffIR(:,:,:,fi)=mean(shuffI./shuffHYf,4);
@@ -505,10 +536,13 @@ end
 
 % Statistical significance thresholds
 if opts.SurrogateMethod > 0
+    % Statistical significance thresholds
     R.SigThreshT = R.meanShuffT+opts.oneTailZ*R.sigmaShuffT;
     R.SigThreshI = R.meanShuffI+opts.oneTailZ*R.sigmaShuffI;
+    R.SigThreshL = R.meanShuffL+opts.oneTailZ*R.sigmaShuffL;
     R.SigThreshTR = R.meanShuffTR+opts.oneTailZ*R.sigmaShuffTR;
     R.SigThreshIR = R.meanShuffIR+opts.oneTailZ*R.sigmaShuffIR;
+    
 end
 
 % Derived Quantities
@@ -519,6 +553,14 @@ if opts.doEntropy
     [R.Abinary,R.Awtd,R.AwtdCut,R.charLagFirstPeak,R.TcharLagFirstPeak,R.charLagMaxPeak,R.TcharLagMaxPeak,R.TvsIzerocharLagMaxPeak,R.nSigLags,R.FirstSigLag,R.LastSigLag]=AdjMatrices(R.TnormByDist,R.SigThreshTnormByDist,R.TvsIzero,R.lagVect);
     R.Hm=sum(squeeze(R.HXt(:,1,1,:)./repmat(log2(R.nBinVect),[1 1,1,nDataFiles])))./nVars;
     R.TSTm=squeeze(sum(sum(R.T./repmat(log2(R.nBinVect),[1 nVars nLags nDataFiles]),1),2))./(nVars^2);
+    
+    % Normalization with mean IR of surrogates
+    if opts.SurrogateTestEachLag == 1
+        R.IRnormByShuff = R.IR./R.meanShuffIR;
+        R.sigmaShuffIRnormByShuff = R.sigmaShuffIR./R.meanShuffIR;
+        R.SigThreshIRnormByShuff = 1+opts.oneTailZ*R.sigmaShuffIRnormByShuff;
+    end
+
 end       
 
 % Save output

@@ -53,6 +53,56 @@ elseif ~iscell(opts.varNames)
     end
 end
 
+if ~isfield(opts,'targetVars')
+    if ~isnan(nVars)
+        logwrite('Setting targetVars to all.',1);
+        opts.targetVars = NaN([1 nVars]);
+        for i = 1:nVars
+            opts.targetVars(i) = i;
+        end
+    else
+        logwrite('No targetVars option found. Setting targetVars to all.',1);
+    end
+elseif isempty(opts.targetVars)
+    if ~isnan(nVars)
+        logwrite('Setting targetVars to all for rest of processing run.',1);
+        opts.targetVars = NaN([1 nVars]);
+        for i = 1:nVars
+            opts.targetVars(i) = i;
+        end
+    else
+        logwrite('No targetVars option found. Setting targetVars to all for rest of processing run.',1);
+    end    
+elseif iscell(opts.targetVars) && ischar(cell2mat(opts.targetVars))
+    targetVars = cell([1 length(opts.targetVars(:))]);
+    for i=1:length(targetVars)
+        targetVars{i} = find(strcmp(opts.varNames,opts.targetVars{i}));
+    end
+    opts.targetVars=targetVars;
+    
+    if length(cell2mat(opts.targetVars)) ~= length(opts.targetVars)
+        opts.targetVars = NaN([1 nVars]);
+        for i = 1:nVars
+            opts.targetVars(i) = i;
+        end
+        logwrite('At least one variable listed in targetVars does not match the list of varNames. Setting targetVars to all.',1);
+    else
+        opts.targetVars=unique(cell2mat(opts.targetVars));
+    end
+elseif iscell(opts.targetVars) && ~isnan(nVars) && max(cell2mat(opts.targetVars(:))) > nVars
+     opts.targetVars = NaN([1 nVars]);
+        for i = 1:nVars
+            opts.targetVars(i) = i;
+        end
+    logwrite('At least one indices in targetVars is greater than the number of variables. Setting targetVars to all.',1);
+elseif ~iscell(opts.targetVars) && ~isnan(nVars) && max(opts.targetVars(:)) > nVars
+     opts.targetVars = NaN([1 nVars]);
+        for i = 1:nVars
+            opts.targetVars(i) = i;
+        end
+    logwrite('At least one indices in targetVars is greater than the number of variables. Setting targetVars to all.',1);
+end
+
 if ~isfield(opts,'varSymbols')
     if ~isnan(nVars)
         logwrite('Setting variable symbols to variable names for rest of processing run.',1);
@@ -85,11 +135,11 @@ elseif ~isnumeric(opts.NoDataCode)
 end
 
 if ~isfield(opts,'trimTheData') 
-    logwrite('No trimTheData option found. Setting to default (1 = yes).',1);
-    opts.trimTheData = 1; % set to 0 to not trim the whole row if one data value in the row is NoData; default is 1
+    logwrite('No trimTheData option found. Setting to default (0 = no).',1);
+    opts.trimTheData = 0; % set to 0 to not trim the whole row if one data value in the row is NoData; default is 1
 elseif isempty(find([0 1] == opts.trimTheData,1))
-    logwrite('Warning: Bad trimTheData option. Setting to default (1 = yes).',1);
-    opts.trimTheData = 1; % set to 0 to not trim the whole row if one data value in the row is NoData; default is 1
+    logwrite('Warning: Bad trimTheData option. Setting to default (0 = no).',1);
+    opts.trimTheData = 0; % set to 0 to not trim the whole row if one data value in the row is NoData; default is 1
 end
 
 if ~isfield(opts,'transformation')
@@ -189,7 +239,7 @@ end
 if ~isfield(opts,'SurrogateMethod')
     logwrite('No SurrogateMethod option found. Setting to default (2 = random shuffle).',1);
     opts.SurrogateMethod = 2; % 0 = No statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = new surrogates created via random shuffle of input data; 3 = new surrogates created via IAAFT method performed on input data
-elseif isempty(find([0 1 2 3] == opts.SurrogateMethod,1))
+elseif isempty(find([0 1 2 3 4] == opts.SurrogateMethod,1))
     logwrite('Warning: Bad SurrogateMethod option. Setting to default (2 = random shuffle).',1);
     opts.SurrogateMethod = 2; % 0 = No statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = new surrogates created via random shuffle of input data; 3 = new surrogates created via IAAFT method performed on input data
 end

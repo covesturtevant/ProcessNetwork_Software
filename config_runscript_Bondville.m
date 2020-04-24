@@ -27,7 +27,7 @@ opts.varUnits = {'W m^{-2}','\circC','KPa','\circC','mm','m^{3} m^{-3}','W m^{-2
 
 % Preprocessing options
 opts.NoDataCode = -9999; % Numerical value representing no data (default = NaN)
-opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no, 1 = yes (default)
+opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no (default), 1 = yes
 opts.transformation = 1; % 0 = apply no transformation (default), 1 = apply anomaly filter, 2 = apply maximal overlap wavelet transform (requires no data gaps)
     opts.anomalyPeriodInData = 48; % Anomaly filter only: set to the length in time steps of the period of the data (default = 48)
     opts.anomalyMovingAveragePeriodNumber = 5; % Anomaly filter only: the moving window used for anomaly generation, in # of periods (default = 5)

@@ -16,7 +16,7 @@ opts.varUnits = {};  % (optional) cell row of strings listing the variable symbo
 
 % Preprocessing options
 opts.NoDataCode = NaN; % Numerical value representing no data (default = NaN)
-opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no, 1 = yes (default)
+opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no (default), 1 = yes
 opts.transformation = 0; % 0 = apply no transformation (default), 1 = apply anomaly filter, 2 = apply maximal overlap wavelet transform (requires no data gaps)
     opts.anomalyPeriodInData = 24; % Anomaly filter only: set to the length in time steps of the period of the data (default = 48)
     opts.anomalyMovingAveragePeriodNumber = 5; % Anomaly filter only: the moving window used for anomaly generation, in # of periods (default = 5)

@@ -41,7 +41,10 @@ function [R,opts] = ProcessNetwork(opts)
 % R.IRnormbyShuff
 % R.SigThreshIRnormbyShuff
 % R.sigmaShuffIRnormByShuff
-
+% R.IRsubtractShuff
+% R.IRSigThreshIRsubtractShuff
+% - Added two more surrogate creation options. Random walk, and random walk
+% with wavelet variance across scales matched to that of the tested data
 %% Check parameters and settings
 global processLog
 
@@ -207,8 +210,15 @@ for fi = 1:nDataFiles
             logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using IAAFT method (this may take a while).'],1);
         elseif opts.SurrogateMethod == 4
             logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method (this may take a while).'],1);
+        elseif opts.SurrogateMethod == 5
+            logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method with matched wavelet variance (this may take a while).'],1);
         end
         
+        % Create surrogates using method specified
+        if ~isempty(find([2 3 4 5] == opts.SurrogateMethod,1))
+            SavedSurrogates = createSurrogates(opts,rawData,opts.nTests);
+        end
+            
         % Initalize surrogate matrix
         if opts.SurrogateTestEachLag == 1
             % Test every lag in surrogates
@@ -233,12 +243,9 @@ for fi = 1:nDataFiles
         shuffHYf = NaN([nVars nVars nSLags opts.nTests]);        
 
         for si = 1:opts.nTests
-            if opts.SurrogateMethod == 1
-                Surrogates = SavedSurrogates(:,:,si);
-            elseif ~isempty(find([2 3 4] == opts.SurrogateMethod,1))
-                % Create surrogates using method specified
-                Surrogates = createSurrogates(opts,rawData,1);
-            end
+            logwrite(['     Surrogate ' num2str(si)],1);
+
+            Surrogates = SavedSurrogates(:,:,si);
             
             % Preprocess surrogates same as Data
             Surrogates = preProcess(opts,Surrogates);
@@ -430,6 +437,8 @@ if opts.binType == 2
                 logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using IAAFT method (this may take a while)...'],1);
             elseif opts.SurrogateMethod == 4
                 logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method (this may take a while)...'],1);
+            elseif opts.SurrogateMethod == 5
+                logwrite(['Creating and running the same operations on ' num2str(opts.nTests) ' surrogates using random walk method with matched wavelet variance (this may take a while).'],1);
             end
 
             % Initalize surrogate matrix
@@ -454,7 +463,7 @@ if opts.binType == 2
             for si = 1:opts.nTests
                 if opts.SurrogateMethod == 1
                     Surrogates = SavedSurrogates(:,:,si);
-                elseif ~isempty(find([2 3 4] == opts.SurrogateMethod,1))
+                elseif ~isempty(find([2 3 4 5] == opts.SurrogateMethod,1))
                     % Create surrogates using method specified
                     [Surrogates] = createSurrogates(opts,rawData,1);
                 end
@@ -556,9 +565,15 @@ if opts.doEntropy
     
     % Normalization with mean IR of surrogates
     if opts.SurrogateTestEachLag == 1
+        % Dividing by mean IR of surrogates at each lag
         R.IRnormByShuff = R.IR./R.meanShuffIR;
         R.sigmaShuffIRnormByShuff = R.sigmaShuffIR./R.meanShuffIR;
         R.SigThreshIRnormByShuff = 1+opts.oneTailZ*R.sigmaShuffIRnormByShuff;
+        
+        % Subtracting out the mean IR of surrogates at each lag
+        R.IRsubtractShuff = R.IR-R.meanShuffIR;
+        R.SigThreshIRsubtractShuff = opts.oneTailZ*R.sigmaShuffIR;
+
     end
 
 end       

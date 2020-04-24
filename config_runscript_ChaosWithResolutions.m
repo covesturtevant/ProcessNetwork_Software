@@ -16,7 +16,7 @@ opts.varUnits = {};  % (optional) cell row of strings listing the variable symbo
 
 % Preprocessing options
 opts.NoDataCode = NaN; % Numerical value representing no data (default = NaN)
-opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no (default), 1 = yes 
+opts.trimTheData = 1; % Remove entire rows of data with at least 1 missing value? 0 = no, 1 = yes (default)
 opts.transformation = 0; % 0 = apply no transformation (default), 1 = apply anomaly filter, 2 = apply maximal overlap wavelet transform (requires no data gaps)
     opts.anomalyPeriodInData = 24; % Anomaly filter only: set to the length in time steps of the period of the data (default = 48)
     opts.anomalyMovingAveragePeriodNumber = 5; % Anomaly filter only: the moving window used for anomaly generation, in # of periods (default = 5)
@@ -26,7 +26,7 @@ opts.transformation = 0; % 0 = apply no transformation (default), 1 = apply anom
 opts.binType = 1; % 0 = don't do classification (or data are already classified), 1 = classify using locally bounded bins (default), 2 = classify using globally bounded bins
     opts.binPctlRange = [0 100]; % [min max] percentile range to determine total bin range for each variable. Default is entire data range ([0 100]) 
     opts.nBins = 11; % Number of bins to classify each signal (default = 11). This can be a single value to be applied to all variables, or a row vector of integers correspoding with each column in the input data
-opts.SurrogateMethod = 2; % 0 = Do not do statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = create and test new surrogates via random shuffle of input data (default); 3 = create and test new surrogates via IAAFT method (requires no data gaps); 4 = create and test new surrogates using random walk method (retains original gaps in data)
+opts.SurrogateMethod = 2; % 0 = Do not do statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = create and test new surrogates via random shuffle of input data (default); 3 = create and test new surrogates via IAAFT method (requires no data gaps); 4 = create and test new surrogates via random walk; 5 = create and test new surrogates via random walk with wavelet variance matched to that of the data
     opts.nTests = 100; % Number of surrogates to create and/or test (default = 100)
 
 % Entropy computation options

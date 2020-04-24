@@ -239,7 +239,7 @@ end
 if ~isfield(opts,'SurrogateMethod')
     logwrite('No SurrogateMethod option found. Setting to default (2 = random shuffle).',1);
     opts.SurrogateMethod = 2; % 0 = No statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = new surrogates created via random shuffle of input data; 3 = new surrogates created via IAAFT method performed on input data
-elseif isempty(find([0 1 2 3 4] == opts.SurrogateMethod,1))
+elseif isempty(find([0 1 2 3 4 5] == opts.SurrogateMethod,1))
     logwrite('Warning: Bad SurrogateMethod option. Setting to default (2 = random shuffle).',1);
     opts.SurrogateMethod = 2; % 0 = No statistical testing, regardless of whether input files contain Surrogates. 1 = Use the Surrogates contained in the loaded files. 2 = new surrogates created via random shuffle of input data; 3 = new surrogates created via IAAFT method performed on input data
 end
